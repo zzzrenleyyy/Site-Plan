@@ -13,7 +13,7 @@ body { margin: 0; padding: 20px; background: #f4f6f8; color: #333; }
 .sidebar { width: 390px; max-width: 100%; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); max-height: 90vh; overflow-y: auto; }
 .canvas-section { flex: 1; min-width: 300px; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); text-align: center; overflow-x: auto; }
 h2 { margin-top: 0; font-size: 1.2rem; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
-.section-title { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin: 15px 0 8px; font-weight: bold; }
+.section-title { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; color: #1d4ed8; margin: 15px 0 8px; font-weight: bold; }
 .input-group { display: flex; gap: 10px; margin-bottom: 10px; }
 .input-field { flex: 1; }
 label { display: block; font-size: 0.75rem; color: #475569; margin-bottom: 4px; font-weight: 600; }
@@ -84,9 +84,9 @@ canvas { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 4px; max
 <div class="input-group">
 <div class="input-field">
 <label>Stairs Type</label>
-<select id="stairsType" onchange="saveAndDraw()"><option value="Single">Single Stairs</option></select>
+<select id="stairsType" onchange="updateStairsQtyUI()"><option value="None">None</option><option value="Single" selected>Single Stairs</option></select>
 </div>
-<div class="input-field">
+<div class="input-field" id="stairsQtyWrap">
 <label>Quantity (1 - 3)</label>
 <select id="stairsQty" onchange="updateStairsQtyUI()"><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option></select>
 </div>
@@ -203,6 +203,32 @@ function edgeNames() {
   return [v ? 'Top' : 'Left', v ? 'Bottom' : 'Right'];
 }
 
+// Every spot on a house wall (used by both stairs and doors)
+const WALL_POS = ['Front (Left Side)', 'Front (Center)', 'Front (Right Side)', 'Back (Left Side)', 'Back (Center)', 'Back (Right Side)',
+  'Side Left (Top)', 'Side Left (Center)', 'Side Left (Bottom)', 'Side Right (Top)', 'Side Right (Center)', 'Side Right (Bottom)'];
+
+function normPos(p) { // older saved values
+  if (p === 'Front' || p === 'Back') return p + ' (Center)';
+  if (p === 'Left' || p === 'Sides Left') return 'Side Left (Center)';
+  if (p === 'Right' || p === 'Sides Right') return 'Side Right (Center)';
+  return p;
+}
+
+function wallOptText(v) {
+  const vert = (frontEdge === 'Left' || frontEdge === 'Right');
+  const [a, b] = edgeNames();
+  const p1 = vert ? 'Left' : 'Top', p2 = vert ? 'Right' : 'Bottom';
+  const m = v.match(/^Side (Left|Right) \((Top|Center|Bottom)\)$/);
+  if (m) return `Side ${m[1] === 'Left' ? a : b} (${m[2] === 'Top' ? p1 : (m[2] === 'Bottom' ? p2 : 'Center')})`;
+  const f = v.match(/^(Front|Back) \((Left Side|Center|Right Side)\)$/);
+  if (f) return `${f[1]} (${f[2] === 'Left Side' ? a + ' Side' : (f[2] === 'Right Side' ? b + ' Side' : 'Center')})`;
+  return v;
+}
+
+function wallOptionsHtml() {
+  return WALL_POS.map(v => `<option value="${v}">${wallOptText(v)}</option>`).join('');
+}
+
 function setFrontEdge(edge, skipDraw) {
   frontEdge = edge;
   document.querySelectorAll('.btn-edge').forEach(btn => btn.classList.remove('active'));
@@ -218,27 +244,30 @@ function setFrontEdge(edge, skipDraw) {
 /* ---------- stairs & doors (dynamic fields) ---------- */
 function updateStairsQtyUI(skipDraw) {
   const [a, b] = edgeNames();
-  const qty = parseInt(document.getElementById('stairsQty').value) || 1;
+  const stairsNone = document.getElementById('stairsType').value === 'None';
+  document.getElementById('stairsQtyWrap').style.display = stairsNone ? 'none' : '';
+  const qty = stairsNone ? 0 : (parseInt(document.getElementById('stairsQty').value) || 1);
   const old = {};
   for (let i = 1; i <= 3; i++) { const el = document.getElementById('stairsPos' + i); if (el) old[i] = el.value; }
   let html = '';
   for (let i = 1; i <= qty; i++) {
     html += `<div class="input-group"><div class="input-field"><label>Stair #${i} Position</label>
       <select id="stairsPos${i}" onchange="saveAndDraw()">
-        <option value="Front">Front</option><option value="Back">Back</option>
-        <option value="Left">${a}</option><option value="Right">${b}</option>
+        ${wallOptionsHtml()}
       </select></div></div>`;
   }
   document.getElementById('stairsPosContainer').innerHTML = html;
   for (let i = 1; i <= qty; i++) {
     const el = document.getElementById('stairsPos' + i);
-    el.value = old[i] || pending['stairsPos' + i] || 'Front';
+    el.value = normPos(old[i] || pending['stairsPos' + i] || ['Front (Center)', 'Back (Center)', 'Side Left (Center)'][i - 1]);
+    if (!el.value) el.value = 'Front (Center)';
   }
   if (!skipDraw) saveAndDraw();
 }
 
 function updateDoorQtyUI(type, skipDraw) {
   const [a, b] = edgeNames();
+  const [p1, p2] = (frontEdge === 'Left' || frontEdge === 'Right') ? ['Left', 'Right'] : ['Top', 'Bottom'];
   const qty = parseInt(document.getElementById(type + 'DoorQty').value) || 0;
   const old = {};
   for (let i = 1; i <= 3; i++) { const el = document.getElementById(type + 'DoorPos' + i); if (el) old[i] = el.value; }
@@ -246,15 +275,14 @@ function updateDoorQtyUI(type, skipDraw) {
   for (let i = 1; i <= qty; i++) {
     html += `<div class="input-group"><div class="input-field"><label>${type === 'single' ? 'Single' : 'Sliding'} Door #${i} Position</label>
       <select id="${type}DoorPos${i}" onchange="saveAndDraw()">
-        <option value="Front (Left Side)">Front (${a} Side)</option><option value="Front (Right Side)">Front (${b} Side)</option>
-        <option value="Back (Left Side)">Back (${a} Side)</option><option value="Back (Right Side)">Back (${b} Side)</option>
-        <option value="Sides Left">Side ${a}</option><option value="Sides Right">Side ${b}</option>
+        ${wallOptionsHtml()}
       </select></div></div>`;
   }
   document.getElementById(type + 'DoorPosContainer').innerHTML = html;
   for (let i = 1; i <= qty; i++) {
     const el = document.getElementById(type + 'DoorPos' + i);
-    el.value = old[i] || pending[type + 'DoorPos' + i] || 'Front (Left Side)';
+    el.value = normPos(old[i] || pending[type + 'DoorPos' + i] || 'Front (Left Side)');
+    if (!el.value) el.value = 'Front (Left Side)'; // older saved values that no longer exist
   }
   if (!skipDraw) saveAndDraw();
 }
@@ -277,17 +305,8 @@ function updateAlignLabels() {
     g(k + 'SideWrap').style.display = (sel.value === 'Center') ? 'none' : '';
     g(k + 'SideLabel').innerText = `Dist: ${sel.value === 'Left' ? a : b} Property Line to ${names[k]} (ft)`;
   });
-  // Re-word dynamic stairs / door lists
-  document.querySelectorAll('[id^="stairsPos"] option').forEach(o => {
-    if (o.value === 'Left') o.text = a;
-    if (o.value === 'Right') o.text = b;
-  });
-  document.querySelectorAll('[id$="DoorPos1"] option, [id$="DoorPos2"] option, [id$="DoorPos3"] option').forEach(o => {
-    if (o.value.endsWith('(Left Side)')) o.text = o.value.replace('Left', a);
-    if (o.value.endsWith('(Right Side)')) o.text = o.value.replace('Right', b);
-    if (o.value === 'Sides Left') o.text = 'Side ' + a;
-    if (o.value === 'Sides Right') o.text = 'Side ' + b;
-  });
+  // Re-word the stairs / door lists
+  document.querySelectorAll('[id^="stairsPos"] option, [id*="DoorPos"] option').forEach(o => { o.text = wallOptText(o.value); });
   ['septic', 'well'].forEach(k => {
     const loc = g(k + 'Loc').value;
     g(k + 'AlignGroup').style.display = (loc === 'Front' || loc === 'Back') ? '' : 'none';
@@ -474,39 +493,36 @@ function drawSitePlan(targetCanvas, pixelRatio, exportMode) {
     v1: house.v0 + house.h + (porch && porchPos === 'Back' ? porchD : 0)
   };
 
-  // Stairs (4' x 3') and doors (4' wide) on the house walls
-  const stairsQty = parseInt(val('stairsQty')) || 1;
+  // Stairs (4' x 3', outside the wall) and doors (4' wide, in the wall): any spot on any house wall
+  const hiV = (frontEdge === 'Bottom' || frontEdge === 'Right') ? 0.75 : 0.25; // where "Top" / "Left" sits along a side wall
+  const wallRect = (pos0, along, thick, outside) => {
+    const pos = normPos(pos0);
+    const wall = pos.startsWith('Front') ? 'Front' : pos.startsWith('Back') ? 'Back' : (pos.startsWith('Side Left') ? 'Left' : 'Right');
+    if (wall === 'Front' || wall === 'Back') {
+      const f = pos.includes('Left Side') ? 0.25 : (pos.includes('Right Side') ? 0.75 : 0.5);
+      const wallV = wall === 'Front' ? house.v0 : house.v0 + house.h;
+      const v0 = outside ? (wall === 'Front' ? wallV - thick : wallV) : wallV - thick / 2;
+      return { u0: house.u0 + house.w * f - along / 2, v0, w: along, h: thick };
+    }
+    const f = pos.includes('(Center)') ? 0.5 : (pos.includes('(Top)') ? hiV : 1 - hiV);
+    const wallU = wall === 'Left' ? house.u0 : house.u0 + house.w;
+    const u0 = outside ? (wall === 'Left' ? wallU - thick : wallU) : wallU - thick / 2;
+    return { u0, v0: house.v0 + house.h * f - along / 2, w: thick, h: along };
+  };
+  const stairsQty = val('stairsType') === 'None' ? 0 : (parseInt(val('stairsQty')) || 1);
   const stairsList = [];
   for (let i = 1; i <= stairsQty; i++) {
     const el = document.getElementById('stairsPos' + i);
-    const pos = el ? el.value : 'Front';
-    const sw = 4, sd = 3;
-    const alongU = house.u0 + (house.w / (stairsQty + 1)) * i - sw / 2;
-    const alongV = house.v0 + (house.h / (stairsQty + 1)) * i - sw / 2;
-    let r;
-    if (pos === 'Front') r = { u0: alongU, v0: house.v0 - sd, w: sw, h: sd };
-    else if (pos === 'Back') r = { u0: alongU, v0: house.v0 + house.h, w: sw, h: sd };
-    else if (pos === 'Left') r = { u0: house.u0 - sd, v0: alongV, w: sd, h: sw };
-    else r = { u0: house.u0 + house.w, v0: alongV, w: sd, h: sw };
-    stairsList.push(Object.assign(r, { pos, index: i }));
+    const pos = normPos(el ? el.value : 'Front (Center)');
+    stairsList.push(Object.assign(wallRect(pos, 4, 3, true), { pos, index: i }));
   }
   const doorsList = [];
   [['single', 'Single Door'], ['sliding', 'Sliding Door']].forEach(([type, name]) => {
     const qty = parseInt(val(type + 'DoorQty')) || 0;
     for (let i = 1; i <= qty; i++) {
       const el = document.getElementById(type + 'DoorPos' + i);
-      const pos = el ? el.value : 'Front (Left Side)';
-      const dw = 4, dd = 1.5;
-      const uAt = f => house.u0 + house.w * f - dw / 2;
-      const vAt = house.v0 + (house.h / (qty + 1)) * i - dw / 2;
-      let r;
-      if (pos === 'Front (Left Side)') r = { u0: uAt(0.25), v0: house.v0 - dd / 2, w: dw, h: dd };
-      else if (pos === 'Front (Right Side)') r = { u0: uAt(0.75), v0: house.v0 - dd / 2, w: dw, h: dd };
-      else if (pos === 'Back (Left Side)') r = { u0: uAt(0.25), v0: house.v0 + house.h - dd / 2, w: dw, h: dd };
-      else if (pos === 'Back (Right Side)') r = { u0: uAt(0.75), v0: house.v0 + house.h - dd / 2, w: dw, h: dd };
-      else if (pos === 'Sides Left') r = { u0: house.u0 - dd / 2, v0: vAt, w: dd, h: dw };
-      else r = { u0: house.u0 + house.w - dd / 2, v0: vAt, w: dd, h: dw };
-      doorsList.push(Object.assign(r, { pos, type: name, kind: type, index: i }));
+      const pos = normPos(el ? el.value : 'Front (Left Side)');
+      doorsList.push(Object.assign(wallRect(pos, 4, 1.5, false), { pos, type: name, kind: type, index: i }));
     }
   });
 
@@ -567,7 +583,8 @@ function drawSitePlan(targetCanvas, pixelRatio, exportMode) {
   const live = named.filter(o => o[1]);
   const hit = (a, b) => a.u0 < b.u0 + b.w - 0.01 && b.u0 < a.u0 + a.w - 0.01 && a.v0 < b.v0 + b.h - 0.01 && b.v0 < a.v0 + a.h - 0.01;
   for (let i = 0; i < live.length; i++) for (let j = i + 1; j < live.length; j++) {
-    if (bodyNames(live[i][0]) && bodyNames(live[j][0])) continue;
+    const sameKind = (live[i][0].includes('Door') && live[j][0].includes('Door')) || (live[i][0].startsWith('Stairs') && live[j][0].startsWith('Stairs'));
+    if (bodyNames(live[i][0]) && bodyNames(live[j][0]) && !sameKind) continue;
     if (hit(live[i][1], live[j][1])) warnings.push(`${live[i][0]} overlaps ${live[j][0]}`);
   }
   live.forEach(([n, r]) => {
@@ -591,9 +608,15 @@ function drawSitePlan(targetCanvas, pixelRatio, exportMode) {
     ['House to rear property line', `${houseDistRear}'`],
     ['Porch', porch ? `${locTxt(porchPos)}, ${porchW}' x ${porchD}'` : 'None']
   ];
-  stairsList.forEach(s => rows.push([`Stairs #${s.index}`, locTxt(s.pos)]));
   if (!doorsList.length) rows.push(['Doors', 'None']);
-  doorsList.forEach(d => rows.push([`${d.type} #${d.index}`, d.pos.replace('Sides Left', 'Side ' + sideName('Left')).replace('Sides Right', 'Side ' + sideName('Right')).replace('(Left Side)', `(${sideName('Left')} side)`).replace('(Right Side)', `(${sideName('Right')} side)`)]));
+  const doorLabel = p => {
+    p = normPos(p);
+    const m = p.match(/^Side (Left|Right) \((Top|Center|Bottom)\)$/);
+    if (m) return `Side ${sideName(m[1])} (${m[2] === 'Center' ? 'Center' : (isVert ? (m[2] === 'Top' ? 'Left' : 'Right') : m[2])})`;
+    return p.replace('(Left Side)', `(${sideName('Left')} side)`).replace('(Right Side)', `(${sideName('Right')} side)`);
+  };
+  stairsList.forEach(s => rows.push([`Stairs #${s.index}`, doorLabel(s.pos)]));
+  doorsList.forEach(d => rows.push([`${d.type} #${d.index}`, doorLabel(d.pos)]));
   rows.push(
     ['Driveway', drive ? `${locTxt(drivePos)}, ${r2(drive.w)}' wide` : 'None'],
     ['Septic', `${locTxt(septicLoc)}, ${rawSW}' x ${rawSD}'`],
