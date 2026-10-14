@@ -120,6 +120,11 @@ canvas { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 4px; max
 
 <div class="section-title">Septic System</div>
 <div class="input-group">
+<div class="input-field"><label>Septic Location (relative to house)</label>
+<select id="septicLoc" onchange="toggleAlign()"><option value="None">None</option><option value="Back" selected>Back</option><option value="Front">Front</option><option value="Left">Side Left</option><option value="Right">Side Right</option></select></div>
+</div>
+<div id="septicDetails">
+<div class="input-group">
 <div class="input-field"><label>Septic Width (ft)</label><input type="number" id="septicW" value="40" oninput="saveAndDraw()"></div>
 <div class="input-field"><label>Septic Depth (ft)</label><input type="number" id="septicD" value="20" oninput="saveAndDraw()"></div>
 </div>
@@ -127,17 +132,19 @@ canvas { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 4px; max
 <div class="input-field"><label>Dist: House to Septic (ft)</label><input type="number" id="distHouseSeptic" value="20" oninput="septicLastEdited='houseSeptic'; saveAndDraw()"></div>
 <div class="input-field"><label>Dist: Septic to Rear Property Line (ft)</label><input type="number" id="distSepticRear" value="140" oninput="septicLastEdited='septicRear'; saveAndDraw()"></div>
 </div>
-<div class="input-group">
-<div class="input-field"><label>Septic Location (relative to house)</label>
-<select id="septicLoc" onchange="toggleAlign()"><option value="Back">Back</option><option value="Front">Front</option><option value="Left">Side Left</option><option value="Right">Side Right</option></select></div>
-</div>
 <div class="input-group" id="septicAlignGroup">
 <div class="input-field"><label>Septic Sideways Position</label>
 <select id="septicAlign" onchange="toggleAlign()"><option value="Center">Center</option><option value="Left">Left</option><option value="Right">Right</option></select></div>
 <div class="input-field" id="septicSideWrap" style="display:none"><label id="septicSideLabel">Dist: Left Property Line to Septic (ft)</label><input type="number" id="septicSideDist" value="20" oninput="saveAndDraw()"></div>
 </div>
+</div>
 
 <div class="section-title">Well System</div>
+<div class="input-group">
+<div class="input-field"><label>Well Location (relative to house)</label>
+<select id="wellLoc" onchange="toggleAlign()"><option value="None">None</option><option value="Back">Back</option><option value="Front" selected>Front</option><option value="Left">Side Left</option><option value="Right">Side Right</option></select></div>
+</div>
+<div id="wellDetails">
 <div class="input-group">
 <div class="input-field"><label>Well Diameter (ft)</label><input type="number" id="wellDiam" value="6" oninput="saveAndDraw()"></div>
 </div>
@@ -145,14 +152,11 @@ canvas { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 4px; max
 <div class="input-field"><label>Dist: House to Well (ft)</label><input type="number" id="distHouseWell" value="20" oninput="wellLastEdited='houseWell'; saveAndDraw()"></div>
 <div class="input-field"><label>Dist: Well to Rear Property Line (ft)</label><input type="number" id="distWellRear" value="140" oninput="wellLastEdited='wellRear'; saveAndDraw()"></div>
 </div>
-<div class="input-group">
-<div class="input-field"><label>Well Location (relative to house)</label>
-<select id="wellLoc" onchange="toggleAlign()"><option value="Back">Back</option><option value="Front" selected>Front</option><option value="Left">Side Left</option><option value="Right">Side Right</option></select></div>
-</div>
 <div class="input-group" id="wellAlignGroup">
 <div class="input-field"><label>Well Sideways Position</label>
 <select id="wellAlign" onchange="toggleAlign()"><option value="Center">Center</option><option value="Left" selected>Left</option><option value="Right">Right</option></select></div>
 <div class="input-field" id="wellSideWrap" style="display:none"><label id="wellSideLabel">Dist: Left Property Line to Well (ft)</label><input type="number" id="wellSideDist" value="30" oninput="saveAndDraw()"></div>
+</div>
 </div>
 
 <div class="summary-box" id="metrics"></div>
@@ -310,6 +314,7 @@ function updateAlignLabels() {
   ['septic', 'well'].forEach(k => {
     const loc = g(k + 'Loc').value;
     g(k + 'AlignGroup').style.display = (loc === 'Front' || loc === 'Back') ? '' : 'none';
+    g(k + 'Details').style.display = (loc === 'None') ? 'none' : '';
   });
   const sBack = g('septicLoc').value === 'Back';
   g('distSepticRear').readOnly = !sBack;
@@ -526,7 +531,8 @@ function drawSitePlan(targetCanvas, pixelRatio, exportMode) {
     }
   });
 
-  // Septic
+  // Septic (or none)
+  const septicOn = septicLoc !== 'None', wellOn = wellLoc !== 'None';
   let dHouseSeptic = num('distHouseSeptic');
   let dSepticRear = num('distSepticRear');
   const linkSeptic = (septicLoc === 'Back' && septicLastEdited === 'septicRear');
@@ -534,12 +540,13 @@ function drawSitePlan(targetCanvas, pixelRatio, exportMode) {
     dHouseSeptic = r2(V - dSepticRear - rawSD - ext.v1);
     document.getElementById('distHouseSeptic').value = dHouseSeptic;
   }
-  const septic = { w: rawSW, h: rawSD };
-  if (septicLoc === 'Back') { septic.v0 = ext.v1 + dHouseSeptic; septic.u0 = latOff(septicAlign, septicSide, rawSW); }
+  const septic = septicOn ? { w: rawSW, h: rawSD } : null;
+  if (!septicOn) { /* no septic system */ }
+  else if (septicLoc === 'Back') { septic.v0 = ext.v1 + dHouseSeptic; septic.u0 = latOff(septicAlign, septicSide, rawSW); }
   else if (septicLoc === 'Front') { septic.v0 = ext.v0 - dHouseSeptic - rawSD; septic.u0 = latOff(septicAlign, septicSide, rawSW); }
   else if (septicLoc === 'Left') { septic.u0 = ext.u0 - dHouseSeptic - rawSW; septic.v0 = house.v0 + (house.h - rawSD) / 2; }
   else { septic.u0 = ext.u1 + dHouseSeptic; septic.v0 = house.v0 + (house.h - rawSD) / 2; }
-  if (!linkSeptic) {
+  if (!linkSeptic && septicOn) {
     dSepticRear = r2(V - (septic.v0 + rawSD));
     document.getElementById('distSepticRear').value = dSepticRear;
   }
@@ -552,12 +559,13 @@ function drawSitePlan(targetCanvas, pixelRatio, exportMode) {
     dHouseWell = r2(V - dWellRear - wellDiam - ext.v1);
     document.getElementById('distHouseWell').value = dHouseWell;
   }
-  const well = { w: wellDiam, h: wellDiam };
-  if (wellLoc === 'Back') { well.v0 = ext.v1 + dHouseWell; well.u0 = latOff(wellAlign, wellSide, wellDiam); }
+  const well = wellOn ? { w: wellDiam, h: wellDiam } : null;
+  if (!wellOn) { /* no well */ }
+  else if (wellLoc === 'Back') { well.v0 = ext.v1 + dHouseWell; well.u0 = latOff(wellAlign, wellSide, wellDiam); }
   else if (wellLoc === 'Front') { well.v0 = ext.v0 - dHouseWell - wellDiam; well.u0 = latOff(wellAlign, wellSide, wellDiam); }
   else if (wellLoc === 'Left') { well.u0 = ext.u0 - dHouseWell - wellDiam; well.v0 = house.v0 + (house.h - wellDiam) / 2; }
   else { well.u0 = ext.u1 + dHouseWell; well.v0 = house.v0 + (house.h - wellDiam) / 2; }
-  if (!linkWell) {
+  if (!linkWell && wellOn) {
     dWellRear = r2(V - (well.v0 + wellDiam));
     document.getElementById('distWellRear').value = dWellRear;
   }
@@ -565,7 +573,7 @@ function drawSitePlan(targetCanvas, pixelRatio, exportMode) {
   const houseDistLeft = r2(house.u0);
   const houseDistRight = r2(L - (house.u0 + house.w));
   const houseDistRear = r2(V - (house.v0 + house.h));
-  const distWellSeptic = r2(Math.hypot((well.u0 + well.w / 2) - (septic.u0 + rawSW / 2), (well.v0 + well.h / 2) - (septic.v0 + rawSD / 2)));
+  const distWellSeptic = (!septic || !well) ? 0 : r2(Math.hypot((well.u0 + well.w / 2) - (septic.u0 + rawSW / 2), (well.v0 + well.h / 2) - (septic.v0 + rawSD / 2)));
 
   let drive = null;
   if (drivePos !== 'None' && driveW > 0) {
@@ -619,13 +627,17 @@ function drawSitePlan(targetCanvas, pixelRatio, exportMode) {
   doorsList.forEach(d => rows.push([`${d.type} #${d.index}`, doorLabel(d.pos)]));
   rows.push(
     ['Driveway', drive ? `${locTxt(drivePos)}, ${r2(drive.w)}' wide` : 'None'],
-    ['Septic', `${locTxt(septicLoc)}, ${rawSW}' x ${rawSD}'`],
-    ['House to septic', `${dHouseSeptic}'`],
-    ['Septic to rear property line', `${dSepticRear}'`],
-    ['Well', `${locTxt(wellLoc)}, dia. ${wellDiam}'`],
-    ['House to well', `${dHouseWell}'`],
-    ['Well to rear property line', `${dWellRear}'`],
-    ['Well to septic (center to center)', `${distWellSeptic}'`]
+    ...(septic ? [
+      ['Septic', `${locTxt(septicLoc)}, ${rawSW}' x ${rawSD}'`],
+      ['House to septic', `${dHouseSeptic}'`],
+      ['Septic to rear property line', `${dSepticRear}'`]
+    ] : [['Septic', 'None']]),
+    ...(well ? [
+      ['Well', `${locTxt(wellLoc)}, dia. ${wellDiam}'`],
+      ['House to well', `${dHouseWell}'`],
+      ['Well to rear property line', `${dWellRear}'`]
+    ] : [['Well', 'None']]),
+    ...((septic && well) ? [['Well to septic (center to center)', `${distWellSeptic}'`]] : [])
   );
   const warnHtml = warnings.length ? `<div style="color:#b91c1c;margin-top:8px;font-weight:600">&#9888; ${warnings.join('<br>&#9888; ')}</div>` : '';
   document.getElementById('metrics').innerHTML = `<strong>Key Measurements Summary:</strong><br>` +
@@ -706,6 +718,7 @@ function drawSitePlan(targetCanvas, pixelRatio, exportMode) {
     box(r, sld ? '#ec4899' : '#0ea5e9', sld ? '#831843' : '#0369a1', 1.5);
   });
 
+  if (septic) {
   const Rs = mapRect(septic);
   box(Rs, '#f59e0b', '#d97706', 2);
   ctx.fillStyle = '#78350f';
@@ -713,8 +726,9 @@ function drawSitePlan(targetCanvas, pixelRatio, exportMode) {
   ctx.textAlign = 'center';
   ctx.fillText('SEPTIC', Rs.x + Rs.w / 2, Rs.y + Rs.h / 2 - 1);
   ctx.fillText(`${rawSW}'x${rawSD}'`, Rs.x + Rs.w / 2, Rs.y + Rs.h / 2 + 11);
+  }
 
-  const wc = mapPt(well.u0 + well.w / 2, well.v0 + well.h / 2);
+  const wc = well ? mapPt(well.u0 + well.w / 2, well.v0 + well.h / 2) : { x: 0, y: 0 };
   const wrPx = Math.max(7, (wellDiam / 2) * scale);
 
   /* ----- dimension lines ----- */
@@ -752,6 +766,7 @@ function drawSitePlan(targetCanvas, pixelRatio, exportMode) {
   dimLocal([0, vS], [house.u0, vS], `${houseDistLeft}' to ${sideName('Left')} PL`, Object.assign({ side: -1 }, dash));
   dimLocal([house.u0 + house.w, vS], [L, vS], `${houseDistRight}' to ${sideName('Right')} PL`, Object.assign({ side: -1 }, dash));
 
+  if (septic) {
   // House to septic / septic to rear
   const gapS = `${dHouseSeptic}' (House to Septic)`;
   const sUo = midOverlap(ext.u0, ext.u1, septic.u0, septic.u0 + rawSW);
@@ -765,7 +780,9 @@ function drawSitePlan(targetCanvas, pixelRatio, exportMode) {
   const uSR = septic.u0 + rawSW * 0.75;
   if (septicLoc === 'Front') dimLocal([uSR, 0], [uSR, septic.v0], `${r2(septic.v0)}' (Septic to Front PL)`);
   else dimLocal([uSR, septic.v0 + rawSD], [uSR, V], `${dSepticRear}' (Septic to Rear PL)`);
+  }
 
+  if (well) {
   // House to well / well to rear
   const gapW = `${dHouseWell}' (House to Well)`;
   const wUo = midOverlap(ext.u0, ext.u1, well.u0, well.u0 + wellDiam);
@@ -779,6 +796,7 @@ function drawSitePlan(targetCanvas, pixelRatio, exportMode) {
   }
   if (wellLoc === 'Front') dimLocal([wMidU, 0], [wMidU, well.v0], `${r2(well.v0)}' (Well to Front PL)`);
   else dimLocal([wMidU, well.v0 + wellDiam], [wMidU, V], `${dWellRear}' (Well to Rear PL)`);
+  }
 
   // Septic / well distance from the property side line (only when placed Left or Right)
   const sideDist = (r, align, d) => {
@@ -787,10 +805,11 @@ function drawSitePlan(targetCanvas, pixelRatio, exportMode) {
     if (align === 'Left') dimLocal([0, v], [r.u0, v], `${d}'`);
     else dimLocal([r.u0 + r.w, v], [L, v], `${d}'`);
   };
-  if (septicLoc === 'Front' || septicLoc === 'Back') sideDist(septic, septicAlign, septicSide);
-  if (wellLoc === 'Front' || wellLoc === 'Back') sideDist(well, wellAlign, wellSide);
+  if (septic && (septicLoc === 'Front' || septicLoc === 'Back')) sideDist(septic, septicAlign, septicSide);
+  if (well && (wellLoc === 'Front' || wellLoc === 'Back')) sideDist(well, wellAlign, wellSide);
   if (drive) dimLocal([drive.u0, drive.h * 0.1], [drive.u0 + drive.w, drive.h * 0.1], `${r2(drive.w)}'`);
 
+  if (well) {
   // Well drawn after the dimension lines so nothing covers it; name beside it
   ctx.beginPath();
   ctx.arc(wc.x, wc.y, wrPx, 0, 2 * Math.PI);
@@ -809,6 +828,7 @@ function drawSitePlan(targetCanvas, pixelRatio, exportMode) {
   ctx.fillStyle = '#0e7490';
   ctx.fillText(`WELL (dia. ${wellDiam}')`, nx, wc.y + 4);
   ctx.lineWidth = 1;
+  }
 
   // Overall lot dimensions
   const dimFont = 'bold 12px sans-serif';
