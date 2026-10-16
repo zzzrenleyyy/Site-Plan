@@ -114,8 +114,14 @@ canvas { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 4px; max
 <div class="section-title">Driveway</div>
 <div class="input-group">
 <div class="input-field"><label>Driveway Position</label>
-<select id="drivePos" onchange="toggleAlign()"><option value="None">None</option><option value="Left">Side Left</option><option value="Right">Side Right</option></select></div>
+<select id="drivePos" onchange="toggleAlign()"><option value="None">None</option><option value="Left">Side Left</option><option value="Right">Side Right</option><option value="Front">Front Center</option></select></div>
 <div class="input-field" id="driveWrap" style="display:none"><label>Driveway Width (ft)</label><input type="number" id="driveW" value="12" oninput="saveAndDraw()"></div>
+</div>
+<div class="input-group" id="drivePLWrap" style="display:none">
+<div class="input-field"><label id="drivePLLabel">Dist: Property Line to Driveway (ft) - blank = auto</label><input type="number" id="drivePLDist" value="" placeholder="Auto (next to house)" oninput="saveAndDraw()"></div>
+</div>
+<div class="input-group" id="driveDepthWrap" style="display:none">
+<div class="input-field"><label>Driveway Depth (ft) - leave blank for auto</label><input type="number" id="driveD" value="" placeholder="Auto (to the house)" oninput="saveAndDraw()"></div>
 </div>
 
 <div class="section-title">Septic System</div>
@@ -137,6 +143,9 @@ canvas { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 4px; max
 <select id="septicAlign" onchange="toggleAlign()"><option value="Center">Center</option><option value="Left">Left</option><option value="Right">Right</option></select></div>
 <div class="input-field" id="septicSideWrap" style="display:none"><label id="septicSideLabel">Dist: Left Property Line to Septic (ft)</label><input type="number" id="septicSideDist" value="20" oninput="saveAndDraw()"></div>
 </div>
+<div class="input-group" id="septicPLWrap" style="display:none">
+<div class="input-field"><label id="septicPLLabel">Dist: Property Line to Septic (ft) - blank = auto</label><input type="number" id="septicPLDist" value="" placeholder="Auto (next to house)" oninput="saveAndDraw()"></div>
+</div>
 </div>
 
 <div class="section-title">Well System</div>
@@ -157,6 +166,9 @@ canvas { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 4px; max
 <select id="wellAlign" onchange="toggleAlign()"><option value="Center">Center</option><option value="Left" selected>Left</option><option value="Right">Right</option></select></div>
 <div class="input-field" id="wellSideWrap" style="display:none"><label id="wellSideLabel">Dist: Left Property Line to Well (ft)</label><input type="number" id="wellSideDist" value="30" oninput="saveAndDraw()"></div>
 </div>
+<div class="input-group" id="wellPLWrap" style="display:none">
+<div class="input-field"><label id="wellPLLabel">Dist: Property Line to Well (ft) - blank = auto</label><input type="number" id="wellPLDist" value="" placeholder="Auto (next to house)" oninput="saveAndDraw()"></div>
+</div>
 </div>
 
 <div class="section-title">Water Meter (Existing)</div>
@@ -174,6 +186,9 @@ canvas { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 4px; max
 <select id="meterAlign" onchange="toggleAlign()"><option value="Center">Center</option><option value="Left">Left</option><option value="Right">Right</option></select></div>
 <div class="input-field" id="meterSideWrap" style="display:none"><label id="meterSideLabel">Dist: Left Property Line to Water Meter (ft)</label><input type="number" id="meterSideDist" value="20" oninput="saveAndDraw()"></div>
 </div>
+<div class="input-group" id="meterPLWrap" style="display:none">
+<div class="input-field"><label id="meterPLLabel">Dist: Property Line to Water Meter (ft) - blank = auto</label><input type="number" id="meterPLDist" value="" placeholder="Auto (next to house)" oninput="saveAndDraw()"></div>
+</div>
 </div>
 
 <div class="section-title">City Sewer (Existing)</div>
@@ -190,6 +205,9 @@ canvas { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 4px; max
 <div class="input-field"><label>City Sewer Sideways Position</label>
 <select id="sewerAlign" onchange="toggleAlign()"><option value="Center">Center</option><option value="Left">Left</option><option value="Right">Right</option></select></div>
 <div class="input-field" id="sewerSideWrap" style="display:none"><label id="sewerSideLabel">Dist: Left Property Line to City Sewer (ft)</label><input type="number" id="sewerSideDist" value="20" oninput="saveAndDraw()"></div>
+</div>
+<div class="input-group" id="sewerPLWrap" style="display:none">
+<div class="input-field"><label id="sewerPLLabel">Dist: Property Line to City Sewer (ft) - blank = auto</label><input type="number" id="sewerPLDist" value="" placeholder="Auto (next to house)" oninput="saveAndDraw()"></div>
 </div>
 </div>
 
@@ -358,6 +376,15 @@ function updateAlignLabels() {
   if (!wBack) wellLastEdited = 'houseWell';
   g('porchSizeGroup').style.display = (g('porchPos').value === 'None') ? 'none' : '';
   g('driveWrap').style.display = (g('drivePos').value === 'None') ? 'none' : '';
+  g('driveDepthWrap').style.display = (g('drivePos').value === 'None') ? 'none' : '';
+  [['septic', 'Septic'], ['well', 'Well'], ['meter', 'Water Meter'], ['sewer', 'City Sewer']].forEach(([k, n]) => {
+    const loc = g(k + 'Loc').value;
+    g(k + 'PLWrap').style.display = (loc === 'Left' || loc === 'Right') ? '' : 'none';
+    g(k + 'PLLabel').innerText = `Dist: ${loc === 'Left' ? a : b} Property Line to ${n} (ft) - blank = auto`;
+  });
+  const dpv = g('drivePos').value;
+  g('drivePLWrap').style.display = (dpv === 'Left' || dpv === 'Right') ? '' : 'none';
+  g('drivePLLabel').innerText = `Dist: ${dpv === 'Left' ? a : b} Property Line to Driveway (ft) - blank = auto`;
 }
 
 function toggleAlign() {
@@ -399,7 +426,41 @@ function drawVerticalRoad(ctx, x, y, w, h, label) {
   ctx.restore();
 }
 
-// opts: color, dash, font, dx, dy, anchor ('right-of'|'left-of'), side (+1 / -1: put label beside / above-below the line)
+let LBOX = [];   // text already on the plan: names, sizes and dimension labels
+let SBOX = [];   // object shapes (dimension labels prefer not to sit on them)
+let LBOUNDS = { w: 950, h: 1020 };
+
+function overlapArea(a, b) {
+  const w = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+  const h = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+  return (w > 0 && h > 0) ? w * h : 0;
+}
+function boxScore(r) { // 0 = completely clear
+  if (r.x < 2 || r.y < 2 || r.x + r.w > LBOUNDS.w - 2 || r.y + r.h > LBOUNDS.h - 2) return 1e6;
+  let sc = 0;
+  LBOX.forEach(o => { sc += overlapArea(r, o) * 4; });
+  SBOX.forEach(o => { sc += overlapArea(r, o); });
+  return sc;
+}
+
+function computeLabelBox(ctx, x1, y1, x2, y2, label, opts) {
+  ctx.save();
+  ctx.font = opts.font || '10px sans-serif';
+  let dx = opts.dx || 0, dy = opts.dy || 0, anchor = opts.anchor;
+  if (opts.side) {
+    if (Math.abs(x1 - x2) < 1) { dx = opts.side * 8; anchor = opts.side > 0 ? 'right-of' : 'left-of'; }
+    else dy = opts.side * 11;
+  }
+  const bw = ctx.measureText(label).width + 10;
+  let cx = (x1 + x2) / 2 + dx;
+  if (anchor === 'right-of') cx += bw / 2;
+  if (anchor === 'left-of') cx -= bw / 2;
+  const cy = (y1 + y2) / 2 + dy;
+  ctx.restore();
+  return { cx, cy, bw };
+}
+
+// opts: color, dash, font, dx, dy, anchor ('right-of'|'left-of'), side (+1 / -1), fixed (never move the label)
 function drawDimensionArrow(ctx, x1, y1, x2, y2, label, opts = {}) {
   const color = opts.color || '#475569';
   ctx.save();
@@ -425,21 +486,32 @@ function drawDimensionArrow(ctx, x1, y1, x2, y2, label, opts = {}) {
   }
   if (label) {
     ctx.font = opts.font || '10px sans-serif';
-    let dx = opts.dx || 0, dy = opts.dy || 0, anchor = opts.anchor;
-    if (opts.side) {
-      if (Math.abs(x1 - x2) < 1) { dx = opts.side * 8; anchor = opts.side > 0 ? 'right-of' : 'left-of'; }
-      else dy = opts.side * 11;
+    const base = computeLabelBox(ctx, x1, y1, x2, y2, label, opts);
+    const bw = base.bw;
+    let best = { cx: base.cx, cy: base.cy };
+    if (!opts.fixed) {
+      // try the requested spot first, then slide along the line, then the other side of it, then on the line
+      const vert = Math.abs(x1 - x2) < 1, horiz = Math.abs(y1 - y2) < 1;
+      const ts = [0.5, 0.3, 0.7, 0.15, 0.85, 0.05, 0.95];
+      const pt = t => ({ x: x1 + (x2 - x1) * t, y: y1 + (y2 - y1) * t });
+      const ox = base.cx - (x1 + x2) / 2, oy = base.cy - (y1 + y2) / 2;
+      const cands = [{ cx: base.cx, cy: base.cy }];
+      ts.forEach(t => { const p = pt(t); cands.push({ cx: p.x + ox, cy: p.y + oy }); });
+      if (vert) [1, -1].forEach(sd => ts.forEach(t => { const p = pt(t); cands.push({ cx: p.x + sd * (bw / 2 + 6), cy: p.y }); }));
+      else if (horiz) [1, -1].forEach(sd => [11, 25].forEach(ex => ts.forEach(t => { const p = pt(t); cands.push({ cx: p.x, cy: p.y + sd * ex }); })));
+      ts.forEach(t => { const p = pt(t); cands.push({ cx: p.x, cy: p.y }); });
+      let bestSc = Infinity;
+      for (const c of cands) {
+        const sc = boxScore({ x: c.cx - bw / 2, y: c.cy - 7, w: bw, h: 14 });
+        if (sc < bestSc) { bestSc = sc; best = c; if (sc === 0) break; }
+      }
     }
-    const bw = ctx.measureText(label).width + 10;
-    let cx = (x1 + x2) / 2 + dx;
-    if (anchor === 'right-of') cx += bw / 2;
-    if (anchor === 'left-of') cx -= bw / 2;
-    const cy = (y1 + y2) / 2 + dy;
+    LBOX.push({ x: best.cx - bw / 2, y: best.cy - 7, w: bw, h: 14 });
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(cx - bw / 2, cy - 7, bw, 14);
+    ctx.fillRect(best.cx - bw / 2, best.cy - 7, bw, 14);
     ctx.fillStyle = opts.textColor || '#0f172a';
     ctx.textAlign = 'center';
-    ctx.fillText(label, cx, cy + 3);
+    ctx.fillText(label, best.cx, best.cy + 3);
   }
   ctx.restore();
 }
@@ -472,6 +544,7 @@ function drawSitePlan(targetCanvas, pixelRatio, exportMode) {
   const ratio = pixelRatio || 1;
   const CW = 950, CH = exportMode ? canvas.height / ratio : 1020;
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  LBOX = []; SBOX = []; LBOUNDS = { w: 950, h: exportMode ? canvas.height / (pixelRatio || 1) : 1020 };
   const num = id => parseFloat(document.getElementById(id).value) || 0;
   const val = id => document.getElementById(id).value;
   const r2 = v => Math.round(v * 100) / 100;
@@ -532,6 +605,15 @@ function drawSitePlan(targetCanvas, pixelRatio, exportMode) {
     v1: house.v0 + house.h + (porch && porchPos === 'Back' ? porchD : 0)
   };
 
+  // Side locations can be placed by their distance from the property line (blank = next to the house)
+  const plIn = k => { const e = document.getElementById(k + 'PLDist'); return (e && e.value !== '') ? (parseFloat(e.value) || 0) : null; };
+  const applyPL = (o, loc, k) => {
+    const pl = plIn(k);
+    if (!o || pl === null || (loc !== 'Left' && loc !== 'Right')) return null;
+    o.u0 = loc === 'Left' ? pl : L - pl - o.w;
+    return r2(loc === 'Left' ? ext.u0 - (o.u0 + o.w) : o.u0 - ext.u1); // resulting gap to the house
+  };
+
   // Stairs (4' x 3', outside the wall) and doors (4' wide, in the wall): any spot on any house wall
   const hiV = (frontEdge === 'Bottom' || frontEdge === 'Right') ? 0.75 : 0.25; // where "Top" / "Left" sits along a side wall
   const wallRect = (pos0, along, thick, outside) => {
@@ -580,6 +662,7 @@ function drawSitePlan(targetCanvas, pixelRatio, exportMode) {
   else if (septicLoc === 'Front') { septic.v0 = ext.v0 - dHouseSeptic - rawSD; septic.u0 = latOff(septicAlign, septicSide, rawSW); }
   else if (septicLoc === 'Left') { septic.u0 = ext.u0 - dHouseSeptic - rawSW; septic.v0 = house.v0 + (house.h - rawSD) / 2; }
   else { septic.u0 = ext.u1 + dHouseSeptic; septic.v0 = house.v0 + (house.h - rawSD) / 2; }
+  if (septicOn) { const gS = applyPL(septic, septicLoc, 'septic'); if (gS !== null) { dHouseSeptic = gS; document.getElementById('distHouseSeptic').value = gS; } }
   if (!linkSeptic && septicOn) {
     dSepticRear = r2(V - (septic.v0 + rawSD));
     document.getElementById('distSepticRear').value = dSepticRear;
@@ -599,6 +682,7 @@ function drawSitePlan(targetCanvas, pixelRatio, exportMode) {
   else if (wellLoc === 'Front') { well.v0 = ext.v0 - dHouseWell - wellDiam; well.u0 = latOff(wellAlign, wellSide, wellDiam); }
   else if (wellLoc === 'Left') { well.u0 = ext.u0 - dHouseWell - wellDiam; well.v0 = house.v0 + (house.h - wellDiam) / 2; }
   else { well.u0 = ext.u1 + dHouseWell; well.v0 = house.v0 + (house.h - wellDiam) / 2; }
+  if (wellOn) { const gW = applyPL(well, wellLoc, 'well'); if (gW !== null) { dHouseWell = gW; document.getElementById('distHouseWell').value = gW; } }
   if (!linkWell && wellOn) {
     dWellRear = r2(V - (well.v0 + wellDiam));
     document.getElementById('distWellRear').value = dWellRear;
@@ -616,6 +700,8 @@ function drawSitePlan(targetCanvas, pixelRatio, exportMode) {
     else if (loc === 'Front') { o.v0 = ext.v0 - gap - size; o.u0 = latOff(align, sd, size); }
     else if (loc === 'Left') { o.u0 = ext.u0 - gap - size; o.v0 = house.v0 + (house.h - size) / 2; }
     else { o.u0 = ext.u1 + gap; o.v0 = house.v0 + (house.h - size) / 2; }
+    const g2 = applyPL(o, loc, k);
+    if (g2 !== null) { o.gap = g2; document.getElementById('distHouse' + k[0].toUpperCase() + k.slice(1)).value = g2; }
     utils.push(o);
   });
 
@@ -625,14 +711,26 @@ function drawSitePlan(targetCanvas, pixelRatio, exportMode) {
   const distWellSeptic = (!septic || !well) ? 0 : r2(Math.hypot((well.u0 + well.w / 2) - (septic.u0 + rawSW / 2), (well.v0 + well.h / 2) - (septic.v0 + rawSD / 2)));
 
   let drive = null;
+  const driveDepthIn = num('driveD');
   if (drivePos !== 'None' && driveW > 0) {
-    const len = house.v0 + house.h;
-    if (drivePos === 'Left') { const u1 = ext.u0 - 2, u0 = Math.max(0, u1 - driveW); if (u1 > u0) drive = { u0, v0: 0, w: u1 - u0, h: len }; }
-    else { const u0 = ext.u1 + 2, u1 = Math.min(L, u0 + driveW); if (u1 > u0) drive = { u0, v0: 0, w: u1 - u0, h: len }; }
+    // Side driveways run to the back of the house; a front-center driveway runs to the front of the house / porch
+    const len = driveDepthIn > 0 ? driveDepthIn : (drivePos === 'Front' ? ext.v0 - (stairsList.some(st => st.pos.startsWith('Front')) ? 3 : 0) : house.v0 + house.h);
+    if (len > 0) {
+      const plD = plIn('drive');
+      if (drivePos === 'Left') {
+        if (plD !== null) { const u0 = Math.min(Math.max(0, plD), L), u1 = Math.min(L, u0 + driveW); if (u1 > u0) drive = { u0, v0: 0, w: u1 - u0, h: len }; }
+        else { const u1 = ext.u0 - 2, u0 = Math.max(0, u1 - driveW); if (u1 > u0) drive = { u0, v0: 0, w: u1 - u0, h: len }; }
+      } else if (drivePos === 'Right') {
+        if (plD !== null) { const u1 = Math.max(0, L - Math.max(0, plD)), u0 = Math.max(0, u1 - driveW); if (u1 > u0) drive = { u0, v0: 0, w: u1 - u0, h: len }; }
+        else { const u0 = ext.u1 + 2, u1 = Math.min(L, u0 + driveW); if (u1 > u0) drive = { u0, v0: 0, w: u1 - u0, h: len }; }
+      }
+      else { const c0 = house.u0 + house.w / 2 - driveW / 2, u0 = Math.max(0, c0), u1 = Math.min(L, c0 + driveW); if (u1 > u0) drive = { u0, v0: 0, w: u1 - u0, h: len }; }
+    }
   }
 
   /* ----- checks ----- */
   const warnings = [];
+  if (drive && drive.w < driveW - 0.01) warnings.push(`Driveway narrowed to ${r2(drive.w)}' (not enough room for ${driveW}')`);
   const bodyNames = o => o === 'House' || o === 'Porch' || o.startsWith('Stairs') || o.includes('Door');
   const named = [['House', house], ['Porch', porch], ['Septic', septic], ['Well', well], ['Driveway', drive]];
   utils.forEach(o => named.push([o.name, o]));
@@ -641,6 +739,7 @@ function drawSitePlan(targetCanvas, pixelRatio, exportMode) {
   const live = named.filter(o => o[1]);
   const hit = (a, b) => a.u0 < b.u0 + b.w - 0.01 && b.u0 < a.u0 + a.w - 0.01 && a.v0 < b.v0 + b.h - 0.01 && b.v0 < a.v0 + a.h - 0.01;
   for (let i = 0; i < live.length; i++) for (let j = i + 1; j < live.length; j++) {
+    if ((live[i][0] === 'Driveway' && live[j][0].includes('Door')) || (live[j][0] === 'Driveway' && live[i][0].includes('Door'))) continue;
     const sameKind = (live[i][0].includes('Door') && live[j][0].includes('Door')) || (live[i][0].startsWith('Stairs') && live[j][0].startsWith('Stairs'));
     if (bodyNames(live[i][0]) && bodyNames(live[j][0]) && !sameKind) continue;
     if (hit(live[i][1], live[j][1])) warnings.push(`${live[i][0]} overlaps ${live[j][0]}`);
@@ -676,7 +775,11 @@ function drawSitePlan(targetCanvas, pixelRatio, exportMode) {
   stairsList.forEach(s => rows.push([`Stairs #${s.index}`, doorLabel(s.pos)]));
   doorsList.forEach(d => rows.push([`${d.type} #${d.index}`, doorLabel(d.pos)]));
   rows.push(
-    ['Driveway', drive ? `${locTxt(drivePos)}, ${r2(drive.w)}' wide` : 'None'],
+    ...(drive ? [
+      ['Driveway', `${drivePos === 'Front' ? 'Front Center' : locTxt(drivePos)}, ${r2(drive.w)}' wide x ${r2(drive.h)}' deep`],
+      [`Driveway to ${sideName('Left').toLowerCase()} property line`, `${r2(drive.u0)}'`],
+      [`Driveway to ${sideName('Right').toLowerCase()} property line`, `${r2(L - drive.u0 - drive.w)}'`]
+    ] : [['Driveway', 'None']]),
     ...(septic ? [
       ['Septic', `${locTxt(septicLoc)}, ${rawSW}' x ${rawSD}'`],
       ['House to septic', `${dHouseSeptic}'`],
@@ -715,19 +818,44 @@ function drawSitePlan(targetCanvas, pixelRatio, exportMode) {
     if (frontEdge === 'Left') return { x: originX + v * scale, y: originY + u * scale };
     return { x: originX + (pW - v) * scale, y: originY + u * scale };
   };
-  const fitLabel = (r, text, font, color) => {
+  // Name/size labels: inside the shape when they fit, otherwise beside it, always clear of other text
+  const labelPlace = (r, text, font) => {
     ctx.font = font;
-    const tw = ctx.measureText(text).width;
-    const rot = r.h > r.w * 1.5;
-    if (tw + 6 > (rot ? r.h : r.w) || (rot ? r.w : r.h) < 11) return;
+    const lines = text.split('\n');
+    const tw = Math.max(...lines.map(t => ctx.measureText(t).width)), th = 12 * lines.length;
+    const cands = [];
+    if (tw + 6 <= r.w && th + 2 <= r.h) cands.push({ cx: r.x + r.w / 2, cy: r.y + r.h / 2, w: tw, h: th, rot: false, out: false });
+    if (tw + 6 <= r.h && th + 2 <= r.w) cands.push({ cx: r.x + r.w / 2, cy: r.y + r.h / 2, w: th, h: tw, rot: true, out: false });
+    [4, 18, 32, 46, 60].forEach(g => {
+      cands.push({ cx: r.x + r.w + g + tw / 2, cy: r.y + r.h / 2, w: tw, h: th, out: true });
+      cands.push({ cx: r.x - g - tw / 2, cy: r.y + r.h / 2, w: tw, h: th, out: true });
+      cands.push({ cx: r.x + r.w / 2, cy: r.y - g - th / 2, w: tw, h: th, out: true });
+      cands.push({ cx: r.x + r.w / 2, cy: r.y + r.h + g + th / 2, w: tw, h: th, out: true });
+    });
+    let best = cands[0], bestSc = Infinity;
+    for (const c of cands) {
+      const sc = boxScore({ x: c.cx - c.w / 2, y: c.cy - c.h / 2, w: c.w, h: c.h }) + (c.out ? 0.5 : 0);
+      if (sc < bestSc) { bestSc = sc; best = c; if (sc <= 0.5) break; }
+    }
+    LBOX.push({ x: best.cx - best.w / 2, y: best.cy - best.h / 2, w: best.w, h: best.h });
+    return best;
+  };
+  const labelPaint = (pl, text, font, color, outColor) => {
     ctx.save();
-    ctx.translate(r.x + r.w / 2, r.y + r.h / 2);
-    if (rot) ctx.rotate(-Math.PI / 2);
-    ctx.fillStyle = color;
+    ctx.translate(pl.cx, pl.cy);
+    if (pl.rot) ctx.rotate(-Math.PI / 2);
+    ctx.font = font;
     ctx.textAlign = 'center';
-    ctx.fillText(text, 0, 4);
+    const lines = text.split('\n');
+    if (pl.out) { ctx.lineWidth = 3; ctx.strokeStyle = '#ffffff'; ctx.fillStyle = outColor || '#1e293b'; } else ctx.fillStyle = color;
+    lines.forEach((t, i) => {
+      const y = 4 - (lines.length - 1) * 6 + i * 12;
+      if (pl.out) ctx.strokeText(t, 0, y);
+      ctx.fillText(t, 0, y);
+    });
     ctx.restore();
   };
+  const fitLabel = (r, text, font, color, outColor) => labelPaint(labelPlace(r, text, font), text, font, color, outColor);
   const box = (r, fill, stroke, lw) => {
     ctx.fillStyle = fill; ctx.strokeStyle = stroke; ctx.lineWidth = lw;
     ctx.fillRect(r.x, r.y, r.w, r.h);
@@ -750,37 +878,73 @@ function drawSitePlan(targetCanvas, pixelRatio, exportMode) {
   else if (frontEdge === 'Top') drawRoad(ctx, originX, originY - 65, pW * scale, 24, 'FRONT PROPERTY ROAD (TOP)');
   else if (frontEdge === 'Left') drawVerticalRoad(ctx, originX - 65, originY, 24, pD * scale, 'FRONT PROPERTY ROAD (LEFT)');
   else drawVerticalRoad(ctx, originX + pW * scale + 40, originY, 24, pD * scale, 'FRONT PROPERTY ROAD (RIGHT)');
+  {
+    const rt = `FRONT PROPERTY ROAD (${frontEdge.toUpperCase()})`;
+    ctx.font = 'bold 11px sans-serif';
+    const rtw = ctx.measureText(rt).width;
+    const rx = frontEdge === 'Left' ? originX - 65 : originX + pW * scale + 40;
+    const ry = frontEdge === 'Bottom' ? originY + pD * scale + 35 : originY - 65;
+    if (frontEdge === 'Bottom' || frontEdge === 'Top') {
+      SBOX.push({ x: originX, y: ry, w: pW * scale, h: 24 });
+      LBOX.push({ x: originX + pW * scale / 2 - rtw / 2, y: ry + 5, w: rtw, h: 14 });
+    } else {
+      SBOX.push({ x: rx, y: originY, w: 24, h: pD * scale });
+      LBOX.push({ x: rx + 5, y: originY + pD * scale / 2 - rtw / 2, w: 14, h: rtw });
+    }
+  }
 
-  /* ----- objects ----- */
-  if (drive) { const r = mapRect(drive); box(r, '#e5e7eb', '#9ca3af', 1.5); fitLabel(r, `DRIVEWAY ${r2(drive.w)}'`, 'bold 10px sans-serif', '#374151'); }
-  if (porch) { const r = mapRect(porch); box(r, '#c4b5fd', '#7c3aed', 1.5); fitLabel(r, `PORCH ${porchW}' x ${porchD}'`, 'bold 10px sans-serif', '#2e1065'); }
+  /* ----- objects (every name and size gets its own clear spot) ----- */
+  if (drive) { const r = mapRect(drive); box(r, '#e5e7eb', '#9ca3af', 1.5); fitLabel(r, `DRIVEWAY ${r2(drive.w)}' x ${r2(drive.h)}'`, 'bold 10px sans-serif', '#374151'); }
+  if (porch) { const r = mapRect(porch); box(r, '#c4b5fd', '#7c3aed', 1.5); fitLabel(r, `PORCH ${porchW}' x ${porchD}'`, 'bold 10px sans-serif', '#2e1065'); SBOX.push(r); }
 
   const Rh = mapRect(house);
   box(Rh, '#3b82f6', '#1d4ed8', 2);
-  ctx.fillStyle = '#000000';
   ctx.font = 'bold 13px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('HOUSE', Rh.x + Rh.w / 2, Rh.y + Rh.h / 2 - 2);
-  ctx.fillText(`${rawHW}' x ${rawHD}'`, Rh.x + Rh.w / 2, Rh.y + Rh.h / 2 + 14);
+  const hLine2 = `${rawHW}' x ${rawHD}'`;
+  const hwMax = Math.max(ctx.measureText('HOUSE').width, ctx.measureText(hLine2).width);
+  if (hwMax + 8 <= Rh.w && Rh.h >= 36) {
+    ctx.fillStyle = '#000000';
+    ctx.textAlign = 'center';
+    ctx.fillText('HOUSE', Rh.x + Rh.w / 2, Rh.y + Rh.h / 2 - 2);
+    ctx.fillText(hLine2, Rh.x + Rh.w / 2, Rh.y + Rh.h / 2 + 14);
+    LBOX.push({ x: Rh.x + Rh.w / 2 - hwMax / 2, y: Rh.y + Rh.h / 2 - 14, w: hwMax, h: 32 });
+  } else fitLabel(Rh, `HOUSE ${hLine2}`, 'bold 12px sans-serif', '#000000');
+  SBOX.push(Rh);
 
-  stairsList.forEach(s => { const r = mapRect(s); box(r, '#fb7185', '#be123c', 1.5); fitLabel(r, `ST${s.index}`, 'bold 9px sans-serif', '#ffffff'); });
+  stairsList.forEach(s2 => { const r = mapRect(s2); box(r, '#fb7185', '#be123c', 1.5); fitLabel(r, `STAIRS #${s2.index} (4' x 3')`, 'bold 9px sans-serif', '#ffffff'); SBOX.push(r); });
   doorsList.forEach(d => {
     const r = mapRect(d), sld = d.kind === 'sliding';
     box(r, sld ? '#ec4899' : '#0ea5e9', sld ? '#831843' : '#0369a1', 1.5);
+    fitLabel(r, `${sld ? 'SLIDING' : 'SINGLE'} DOOR #${d.index} (4')`, 'bold 9px sans-serif', '#ffffff', sld ? '#9d174d' : '#0369a1');
+    SBOX.push(r);
   });
 
   if (septic) {
-  const Rs = mapRect(septic);
-  box(Rs, '#f59e0b', '#d97706', 2);
-  ctx.fillStyle = '#78350f';
-  ctx.font = `bold ${Math.min(Rs.w, Rs.h) >= 40 ? 10 : 9}px sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.fillText('SEPTIC', Rs.x + Rs.w / 2, Rs.y + Rs.h / 2 - 1);
-  ctx.fillText(`${rawSW}'x${rawSD}'`, Rs.x + Rs.w / 2, Rs.y + Rs.h / 2 + 11);
+    const Rs = mapRect(septic);
+    box(Rs, '#f59e0b', '#d97706', 2);
+    fitLabel(Rs, `SEPTIC\n${rawSW}' x ${rawSD}'`, 'bold 10px sans-serif', '#78350f');
+    SBOX.push(Rs);
   }
 
+  // Well and existing utilities: names are placed now (so dimension labels keep clear), painted last
   const wc = well ? mapPt(well.u0 + well.w / 2, well.v0 + well.h / 2) : { x: 0, y: 0 };
   const wrPx = Math.max(7, (wellDiam / 2) * scale);
+  let wellPaint = null;
+  if (well) {
+    const wr = { x: wc.x - wrPx, y: wc.y - wrPx, w: wrPx * 2, h: wrPx * 2 };
+    const txt = `WELL (dia. ${wellDiam}')`;
+    wellPaint = { pl: labelPlace(wr, txt, 'bold 11px sans-serif'), txt };
+    SBOX.push(wr);
+  }
+  const utilPaint = utils.map(o => {
+    const r0 = mapRect(o);
+    const sz = Math.max(9, r0.w, r0.h);
+    const r = { x: r0.x + r0.w / 2 - sz / 2, y: r0.y + r0.h / 2 - sz / 2, w: sz, h: sz };
+    const txt = `${o.name.toUpperCase()} (EXISTING) ${o.size}'`;
+    const up = { o, r, txt, pl: labelPlace(r, txt, 'bold 10px sans-serif') };
+    SBOX.push(r);
+    return up;
+  });
 
   /* ----- dimension lines ----- */
   const bodyRects = [house, porch, septic, well, ...utils].filter(Boolean).map(mapRect);
@@ -805,7 +969,7 @@ function drawSitePlan(targetCanvas, pixelRatio, exportMode) {
 
   // House to property lines (dashed blue)
   const uF = house.u0 + house.w * 0.12;
-  dimLocal([uF, 0], [uF, house.v0], `${dHouseFront}' to Front PL`, Object.assign({ side: 1 }, dash));
+  dimLocal([uF, 0], [uF, house.v0], `${dHouseFront}' to Front PL`, Object.assign({ side: drive ? -1 : 1 }, dash));
   const uR = house.u0 + house.w * 0.95;
   dimLocal([uR, house.v0 + house.h], [uR, V], `${houseDistRear}' to Rear PL`, Object.assign({ side: 1 }, dash));
   let vS = house.v0 + house.h * 0.5;
@@ -853,11 +1017,12 @@ function drawSitePlan(targetCanvas, pixelRatio, exportMode) {
   const sideDist = (r, align, d) => {
     if (align === 'Center' || d <= 0) return;
     const v = r.v0 + r.h * 0.5;
-    if (align === 'Left') dimLocal([0, v], [r.u0, v], `${d}'`);
-    else dimLocal([r.u0 + r.w, v], [L, v], `${d}'`);
+    if (align === 'Left') dimLocal([0, v], [r.u0, v], `${d}' to ${sideName('Left')} PL`);
+    else dimLocal([r.u0 + r.w, v], [L, v], `${d}' to ${sideName('Right')} PL`);
   };
   if (septic && (septicLoc === 'Front' || septicLoc === 'Back')) sideDist(septic, septicAlign, septicSide);
   if (well && (wellLoc === 'Front' || wellLoc === 'Back')) sideDist(well, wellAlign, wellSide);
+  [['septic', septic, septicLoc], ['well', well, wellLoc]].forEach(([k, o, loc]) => { if (o && (loc === 'Left' || loc === 'Right') && plIn(k) !== null) sideDist(o, loc, plIn(k)); });
   utils.forEach(o => {
     const uc = o.u0 + o.w / 2, nm = o.name;
     const uo = midOverlap(ext.u0, ext.u1, o.u0, o.u0 + o.w);
@@ -871,48 +1036,39 @@ function drawSitePlan(targetCanvas, pixelRatio, exportMode) {
     if (o.loc === 'Front') dimLocal([uc, 0], [uc, o.v0], `${r2(o.v0)}' (${nm} to Front PL)`);
     else dimLocal([uc, o.v0 + o.h], [uc, V], `${r2(V - (o.v0 + o.h))}' (${nm} to Rear PL)`);
     if (o.loc === 'Front' || o.loc === 'Back') sideDist(o, o.align, o.sd);
+    if ((o.loc === 'Left' || o.loc === 'Right') && plIn(o.key) !== null) sideDist(o, o.loc, plIn(o.key));
   });
-  if (drive) dimLocal([drive.u0, drive.h * 0.1], [drive.u0 + drive.w, drive.h * 0.1], `${r2(drive.w)}'`);
-
-  if (well) {
-  // Well drawn after the dimension lines so nothing covers it; name beside it
-  ctx.beginPath();
-  ctx.arc(wc.x, wc.y, wrPx, 0, 2 * Math.PI);
-  ctx.fillStyle = '#06b6d4';
-  ctx.fill();
-  ctx.strokeStyle = '#0891b2';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  const nameRight = isVert ? (frontEdge === 'Left') : (wellLoc !== 'Left');
-  ctx.font = 'bold 11px sans-serif';
-  ctx.textAlign = nameRight ? 'left' : 'right';
-  const nx = wc.x + (nameRight ? 1 : -1) * (wrPx + 5);
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = '#ffffff';
-  ctx.strokeText(`WELL (dia. ${wellDiam}')`, nx, wc.y + 4);
-  ctx.fillStyle = '#0e7490';
-  ctx.fillText(`WELL (dia. ${wellDiam}')`, nx, wc.y + 4);
-  ctx.lineWidth = 1;
+  if (drive) {
+    const green = { dash: true, color: '#059669', textColor: '#065f46', font: 'bold 10px sans-serif' };
+    dimLocal([drive.u0, drive.h * 0.5], [drive.u0 + drive.w, drive.h * 0.5], `${r2(drive.w)}' wide`);
+    dimLocal([drive.u0 + drive.w, 0], [drive.u0 + drive.w, drive.h], `${r2(drive.h)}' (Driveway Depth)`, { side: 1 });
+    // distances from the driveway to BOTH side property lines (drawn in front of the house)
+    const dL = r2(drive.u0), dR = r2(L - (drive.u0 + drive.w));
+    const base = Math.min(drive.h, ext.v0 > 6 ? ext.v0 : drive.h);
+    const vP = base * 0.25;
+    const gopt = Object.assign({ side: isVert ? 1 : -1 }, green);
+    if (dL > 0.5) dimLocal([0, vP], [drive.u0, vP], `${dL}' Driveway to ${sideName('Left')} PL`, gopt);
+    if (dR > 0.5) dimLocal([drive.u0 + drive.w, vP], [L, vP], `${dR}' Driveway to ${sideName('Right')} PL`, gopt);
   }
 
-  utils.forEach(o => {
-    const r0 = mapRect(o);
-    const sz = Math.max(9, r0.w, r0.h);
-    const r = { x: r0.x + r0.w / 2 - sz / 2, y: r0.y + r0.h / 2 - sz / 2, w: sz, h: sz };
+  if (well) {
+    ctx.beginPath();
+    ctx.arc(wc.x, wc.y, wrPx, 0, 2 * Math.PI);
+    ctx.fillStyle = '#06b6d4';
+    ctx.fill();
+    ctx.strokeStyle = '#0891b2';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    labelPaint(wellPaint.pl, wellPaint.txt, 'bold 11px sans-serif', '#0e7490', '#0e7490');
+  }
+  utilPaint.forEach(({ o, r, txt, pl }) => {
     box(r, o.fill, o.stroke, 1.5);
-    const toRight = (r.x + r.w / 2) < (originX + pW * scale / 2);
-    const txt = o.name.toUpperCase() + ' (EXISTING)';
-    ctx.font = 'bold 10px sans-serif';
-    ctx.textAlign = toRight ? 'left' : 'right';
-    const tx = r.x + (toRight ? r.w + 5 : -5), ty = r.y + r.h / 2 + 4;
-    ctx.lineWidth = 3; ctx.strokeStyle = '#ffffff'; ctx.strokeText(txt, tx, ty);
-    ctx.fillStyle = o.stroke; ctx.fillText(txt, tx, ty);
-    ctx.lineWidth = 1;
+    labelPaint(pl, txt, 'bold 10px sans-serif', o.stroke, o.stroke);
   });
 
   // Overall lot dimensions
   const dimFont = 'bold 12px sans-serif';
-  drawDimensionArrow(ctx, originX, originY - 14, originX + pW * scale, originY - 14, `${pW}' LOT WIDTH`, { font: dimFont });
+  drawDimensionArrow(ctx, originX, originY - 14, originX + pW * scale, originY - 14, `${pW}' LOT WIDTH`, { font: dimFont, fixed: true });
   const dX = originX - (frontEdge === 'Left' ? 30 : 54);
   drawDimensionArrow(ctx, dX, originY, dX, originY + pD * scale, '');
   ctx.save();
