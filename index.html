@@ -326,10 +326,17 @@ function updateDoorQtyUI(type, skipDraw) {
   const [p1, p2] = (frontEdge === 'Left' || frontEdge === 'Right') ? ['Left', 'Right'] : ['Top', 'Bottom'];
   const qty = parseInt(document.getElementById(type + 'DoorQty').value) || 0;
   const old = {};
-  for (let i = 1; i <= 3; i++) { const el = document.getElementById(type + 'DoorPos' + i); if (el) old[i] = el.value; }
+  const oldK = {};
+  for (let i = 1; i <= 3; i++) {
+    const el = document.getElementById(type + 'DoorPos' + i); if (el) old[i] = el.value;
+    const ek = document.getElementById(type + 'DoorKind' + i); if (ek) oldK[i] = ek.value;
+  }
   let html = '';
   for (let i = 1; i <= qty; i++) {
-    html += `<div class="input-group"><div class="input-field"><label>${type === 'single' ? 'Single' : 'Sliding'} Door #${i} Position</label>
+    const dn = type === 'single' ? 'Single' : 'Sliding';
+    html += `<div class="input-group"><div class="input-field"><label>${dn} Door #${i} - Front or Back Door</label>
+      <select id="${type}DoorKind${i}" onchange="saveAndDraw()"><option value="Front">Front Door</option><option value="Back">Back Door</option></select></div></div>
+      <div class="input-group"><div class="input-field"><label>${dn} Door #${i} Position</label>
       <select id="${type}DoorPos${i}" onchange="saveAndDraw()">
         ${wallOptionsHtml()}
       </select></div></div>`;
@@ -339,6 +346,9 @@ function updateDoorQtyUI(type, skipDraw) {
     const el = document.getElementById(type + 'DoorPos' + i);
     el.value = normPos(old[i] || pending[type + 'DoorPos' + i] || 'Front (Left Side)');
     if (!el.value) el.value = 'Front (Left Side)'; // older saved values that no longer exist
+    const ek = document.getElementById(type + 'DoorKind' + i);
+    ek.value = oldK[i] || pending[type + 'DoorKind' + i] || (type === 'single' ? 'Front' : 'Back');
+    if (!ek.value) ek.value = type === 'single' ? 'Front' : 'Back';
   }
   if (!skipDraw) saveAndDraw();
 }
@@ -362,7 +372,7 @@ function updateAlignLabels() {
     g(k + 'SideLabel').innerText = `Dist: ${sel.value === 'Left' ? a : b} Property Line to ${names[k]} (ft)`;
   });
   // Re-word the stairs / door lists
-  document.querySelectorAll('[id^="stairsPos"] option, [id*="DoorPos"] option').forEach(o => { o.text = wallOptText(o.value); });
+  document.querySelectorAll('select[id^="stairsPos"] option, select[id*="DoorPos"] option').forEach(o => { o.text = wallOptText(o.value); });
   ['septic', 'well', 'meter', 'sewer'].forEach(k => {
     const loc = g(k + 'Loc').value;
     g(k + 'AlignGroup').style.display = (loc === 'Front' || loc === 'Back') ? '' : 'none';
@@ -643,7 +653,9 @@ function drawSitePlan(targetCanvas, pixelRatio, exportMode) {
     for (let i = 1; i <= qty; i++) {
       const el = document.getElementById(type + 'DoorPos' + i);
       const pos = normPos(el ? el.value : 'Front (Left Side)');
-      doorsList.push(Object.assign(wallRect(pos, 4, 1.5, false), { pos, type: name, kind: type, index: i }));
+      const ke = document.getElementById(type + 'DoorKind' + i);
+      const use = ke ? ke.value : (type === 'single' ? 'Front' : 'Back');
+      doorsList.push(Object.assign(wallRect(pos, 4, 1.5, false), { pos, use, type: name, kind: type, index: i }));
     }
   });
 
@@ -773,7 +785,7 @@ function drawSitePlan(targetCanvas, pixelRatio, exportMode) {
     return p.replace('(Left Side)', `(${sideName('Left')} side)`).replace('(Right Side)', `(${sideName('Right')} side)`);
   };
   stairsList.forEach(s => rows.push([`Stairs #${s.index}`, doorLabel(s.pos)]));
-  doorsList.forEach(d => rows.push([`${d.type} #${d.index}`, doorLabel(d.pos)]));
+  doorsList.forEach(d => rows.push([`${d.type} #${d.index}`, `${d.use} door, ${doorLabel(d.pos)}`]));
   rows.push(
     ...(drive ? [
       ['Driveway', `${drivePos === 'Front' ? 'Front Center' : locTxt(drivePos)}, ${r2(drive.w)}' wide x ${r2(drive.h)}' deep`],
@@ -915,7 +927,7 @@ function drawSitePlan(targetCanvas, pixelRatio, exportMode) {
   doorsList.forEach(d => {
     const r = mapRect(d), sld = d.kind === 'sliding';
     box(r, sld ? '#ec4899' : '#0ea5e9', sld ? '#831843' : '#0369a1', 1.5);
-    fitLabel(r, `${sld ? 'SLIDING' : 'SINGLE'} DOOR #${d.index} (4')`, 'bold 9px sans-serif', '#ffffff', sld ? '#9d174d' : '#0369a1');
+    fitLabel(r, `${d.use.toUpperCase()} ${sld ? 'SLIDING' : 'SINGLE'} DOOR #${d.index} (4')`, 'bold 9px sans-serif', '#ffffff', sld ? '#9d174d' : '#0369a1');
     SBOX.push(r);
   });
 
